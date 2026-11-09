@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GlobeCraft — AI Curated Travel Companion</title>
+  
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <!-- In-Browser OCR for Menu & Sign Scanning -->
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
+  <!-- Custom Stylesheet -->
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+  <!-- ================= PERSISTENT LEFT EMERGENCY DOCK ================= -->
+  <!-- Always visible on both desktop & mobile across all pages -->
+  <nav class="emergency-dock" aria-label="Quick Travel Utilities">
+    <button class="dock-btn" id="dockTransBtn" title="Instant Translator & Lens">
+      <i class="fa-solid fa-language"></i>
+      <span>Translate</span>
+    </button>
+    <button class="dock-btn" id="dockFxBtn" title="Instant Money Converter">
+      <i class="fa-solid fa-coins"></i>
+      <span>Currency</span>
+    </button>
+    <button class="dock-btn" id="dockTransitBtn" title="Transit & Map Guide">
+      <i class="fa-solid fa-train-subway"></i>
+      <span>Transit</span>
+    </button>
+  </nav>
+
+  <!-- ================= EMERGENCY UTILITY MODALS (IN-PAGE) ================= -->
+  <!-- 1. Translator & OCR Modal -->
+  <div class="quick-modal-backdrop" id="modalTranslate">
+    <div class="quick-modal-box">
+      <div class="modal-header">
+        <h3><i class="fa-solid fa-language"></i> In-Page Translator &amp; Lens</h3>
+        <button class="close-modal-btn" data-close="modalTranslate">&times;</button>
+      </div>
+      <div class="modal-body">
+        <label class="field-label">Speech &amp; Phrase Translation</label>
+        <div class="input-with-button">
+          <input type="text" id="quickTransInput" placeholder="Speak or enter text to translate..." />
+          <button class="btn btn-terracotta" id="quickMicBtn" title="Speak"><i class="fa-solid fa-microphone"></i></button>
+        </div>
+        <button class="btn btn-teal full-width" id="quickTransActionBtn">Translate</button>
+        <div class="result-box" id="quickTransResult">Translation output will appear here...</div>
+
+        <hr class="modal-divider" />
+
+        <label class="field-label"><i class="fa-solid fa-camera"></i> Scan Menu or Sign (In-Page OCR)</label>
+        <div class="ocr-upload-zone" onclick="document.getElementById('quickOcrFile').click()">
+          <i class="fa-solid fa-image"></i>
+          <span>Click to select image / photo</span>
+          <input type="file" id="quickOcrFile" accept="image/*" style="display:none;" />
+        </div>
+        <div class="result-box" id="quickOcrResult">OCR results will appear here...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. Currency Converter Modal -->
+  <div class="quick-modal-backdrop" id="modalCurrency">
+    <div class="quick-modal-box">
+      <div class="modal-header">
+        <h3><i class="fa-solid fa-coins"></i> Live Money Converter</h3>
+        <button class="close-modal-btn" data-close="modalCurrency">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p class="modal-desc" id="quickFxTimestamp">Fetching live bank exchange rates...</p>
+        
+        <div class="fx-input-row">
+          <label>Target Currency (<span id="modalTargetCode">USD</span>)</label>
+          <input type="number" id="fxLocalInput" value="100" />
+        </div>
+        <div class="fx-input-row">
+          <label>Philippine Peso (PHP ₱)</label>
+          <input type="number" id="fxPhpInput" />
+        </div>
+        <div class="fx-input-row">
+          <label>US Dollar (USD $)</label>
+          <input type="number" id="fxUsdInput" />
+        </div>
+
+        <div class="atm-quick-tip">
+          <strong><i class="fa-solid fa-circle-info"></i> ATM Golden Rule:</strong> Always choose to be billed in <em>Local Currency</em> at ATMs or card terminals to avoid costly dynamic currency conversion (DCC) markups.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. Transit Modal -->
+  <div class="quick-modal-backdrop" id="modalTransit">
+    <div class="quick-modal-box modal-wide">
+      <div class="modal-header">
+        <h3><i class="fa-solid fa-train-subway"></i> Transit &amp; Map Navigator</h3>
+        <button class="close-modal-btn" data-close="modalTransit">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="map-wrapper">
+          <iframe id="quickMapEmbed" src="https://www.openstreetmap.org/export/embed.html?bbox=139.65%2C35.65%2C139.80%2C35.75&layer=mapnik"></iframe>
+        </div>
+        <div class="transit-tips-box">
+          <h4>Public Transit Guidelines</h4>
+          <ul id="quickTransitList">
+            <li><strong>Transit Tap Cards:</strong> Pick up an IC Card (e.g., Suica, EasyCard, Oyster) or use contactless credit cards for metro and buses.</li>
+            <li><strong>Transit Etiquette:</strong> Please keep voices low and keep right/left on escalators based on local custom.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= TOP APP HEADER ================= -->
+  <header class="app-header">
+    <div class="brand-title" onclick="resetToHome()">
+      <i class="fa-solid fa-compass"></i>
+      <div>
+        <div class="main-title">GlobeCraft</div>
+        <div class="tagline">Smart Travel Curator</div>
+      </div>
+    </div>
+    <div class="dest-badge" id="currentDestBadge">
+      <i class="fa-solid fa-location-dot"></i> <span id="destBadgeText">Where to next?</span>
+    </div>
+  </header>
+
+  <!-- ================= MAIN VIEWPORT CONTENT ================= -->
+  <main class="page-container">
+
+    <!-- SCREEN 1: User Intake Flow -->
+    <section id="intakeView" class="intake-section">
+      <div class="hero-text-block">
+        <h1>Where are you traveling?</h1>
+        <p>Tell us your destination and style. We'll automatically curate your multi-day itinerary, suggest high-value stays, and show verified media vlogs.</p>
+      </div>
+
+      <div class="intake-card">
+        <label class="form-label" for="destQueryInput"><i class="fa-solid fa-plane-departure"></i> Enter Desired Destination</label>
+        <input type="text" id="destQueryInput" class="text-input" placeholder="e.g. Tokyo, Taiwan, Paris, Singapore, Rome, New York" value="Tokyo" />
+
+        <label class="form-label"><i class="fa-solid fa-route"></i> What kind of traveler are you?</label>
+        <div class="persona-selection-grid" id="personaSelectionGrid">
+          <div class="persona-box active" data-persona="first-time">
+            <i class="fa-solid fa-landmark"></i>
+            <h4>First-time Traveler</h4>
+            <p>Must-see viral landmarks, iconic food streets, safe transit lines, and simple step-by-step navigation.</p>
+          </div>
+          <div class="persona-box" data-persona="occasional">
+            <i class="fa-solid fa-mug-saucer"></i>
+            <h4>Occasional Traveler</h4>
+            <p>Balanced and scenic pace, tea rooms, local cafe walks, photo ops, and relaxed downtime.</p>
+          </div>
+          <div class="persona-box" data-persona="frequent">
+            <i class="fa-solid fa-shoe-prints"></i>
+            <h4>Frequent Traveler</h4>
+            <p>Hidden foodie back-alleys, vintage flea markets, indie art communities, and off-beat neighborhoods.</p>
+          </div>
+        </div>
+
+        <button class="btn btn-brick-red full-width action-lg" id="generatePlanBtn">
+          <span>Auto-Curate My Trip</span>
+          <i class="fa-solid fa-arrow-right"></i>
+        </button>
+      </div>
+    </section>
+
+    <!-- SCREEN 2: Curated Trip Dashboard -->
+    <section id="dashboardView" class="dashboard-section" style="display: none;">
+      
+      <!-- Destination Hero Header Banner -->
+      <div class="dest-hero-banner" id="destHeroBanner">
+        <div class="dest-hero-overlay">
+          <span class="dest-sub-tag" id="destPersonaTag">Curated for First-time Traveler</span>
+          <h2 class="dest-hero-title" id="destHeroTitle">Tokyo, Japan</h2>
+        </div>
+      </div>
+
+      <!-- Navigation Tabs (Dedicated Full-Screen Workspaces) -->
+      <div class="dashboard-tabs">
+        <button class="dash-tab active" data-view="itinerary"><i class="fa-solid fa-calendar-day"></i> Itinerary</button>
+        <button class="dash-tab" data-view="stays"><i class="fa-solid fa-bed"></i> Stays &amp; Metasearch</button>
+      </div>
+
+      <!-- WORKSPACE 1: Auto-Curated Itinerary & Vlogs -->
+      <div class="workspace-panel active" id="workspace-itinerary">
+        <div class="workspace-header">
+          <div>
+            <h3>Day-by-Day Curated Schedule</h3>
+            <p class="subtitle">Curated automatically based on your chosen traveler pace.</p>
+          </div>
+          <button class="btn btn-outline" onclick="resetToHome()"><i class="fa-solid fa-sliders"></i> Change Destination</button>
+        </div>
+
+        <div class="day-pills-bar" id="dayPillsBar"></div>
+        <div class="schedule-stream" id="scheduleStream"></div>
+
+        <!-- Curated Travel Vlogs -->
+        <div class="media-vlogs-section">
+          <h3><i class="fa-brands fa-youtube" style="color:#AA3829;"></i> Recommended Travel Vlogs for This Destination</h3>
+          <div class="vlogs-grid" id="vlogsGrid"></div>
+        </div>
+      </div>
+
+      <!-- WORKSPACE 2: Priceline-Style Stays Metasearch Engine -->
+      <div class="workspace-panel" id="workspace-stays">
+        <div class="workspace-header">
+          <div>
+            <h3>Accommodation Metasearch Engine</h3>
+            <p class="subtitle">Compare rates across Booking Holdings and partner platforms to locate the lowest net price.</p>
+          </div>
+        </div>
+
+        <div class="metasearch-container" id="metasearchContainer"></div>
+      </div>
+
+    </section>
+
+  </main>
+
+  <script src="js/app.js"></script>
+</body>
+</html>
